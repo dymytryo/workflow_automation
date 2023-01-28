@@ -141,7 +141,7 @@ _Below is an example of how you can instruct your audience on installing and set
 
 ```sql
    CREATE EXTERNAL TABLE IF NOT EXISTS 
-   database.test (yr INT,
+   database.pre_payment_info (yr INT,
     quarter INT,
     month INT,
     dayofmonth INT,
@@ -197,13 +197,23 @@ TBLPROPERTIES ('classification' = 'csv',
 'has_encrypted_data'='false',
 "skip.header.line.count"="1", -- ignore header 
 );
+```
+  
+3. 
+Issue: created table is dependent on the csv file and the idea is having this table slowly ingesting more information
+Solution: convert to parquet to lose the dependency on the S3 bucket
+
+Athena SQL:
 ```sql
-  
-  
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
+   CREATE TABLE IF NOT EXISTS database.payment_info 
+WITH (
+      format = 'Parquet',
+      parquet_compression = 'SNAPPY')
+AS SELECT *
+FROM database.pre_payment_info ;
+```
+
+
 4. Enter your API in `config.js`
    ```js
    const API_KEY = 'ENTER YOUR API';
