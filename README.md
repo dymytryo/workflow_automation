@@ -137,8 +137,69 @@ _Below is an example of how you can instruct your audience on installing and set
 
 1. Get a free API Key at [https://example.com](https://example.com)
 2. Clone the repo
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   ```sql
+   CREATE EXTERNAL TABLE IF NOT EXISTS 
+   database.test (yr INT,
+    quarter INT,
+    month INT,
+    dayofmonth INT,
+    dayofweek INT,
+    flightdate STRING,
+    uniquecarrier STRING,
+    airlineid INT,
+    carrier STRING,
+    tailnum STRING,
+    flightnum STRING,
+    originairportid INT,
+    originairportseqid INT,
+    origincitymarketid INT,
+    origin STRING,
+    origincityname STRING,
+    originstate STRING,
+    originstatefips STRING,
+    originstatename STRING,
+    originwac INT,
+    destairportid INT,
+    destairportseqid INT,
+    destcitymarketid INT,
+    dest STRING,
+    destcityname STRING,
+    deststate STRING,
+    deststatefips STRING,
+    deststatename STRING,
+    destwac INT,
+    crsdeptime STRING,
+    deptime STRING,
+    depdelay INT,
+    depdelayminutes INT,
+    depdel15 INT,
+    departuredelaygroups INT,
+    deptimeblk STRING,
+    taxiout INT,
+    wheelsoff STRING,
+    wheelson STRING,
+
+)
+
+-- specify the type of SerDe (Serializer/Deserializer) to define the table schema with 
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+
+-- specify the delimiters
+WITH SERDEPROPERTIES (
+'serialization.format' = ',',
+'field.delim' = ',',
+'collection.delim' = '|',
+'mapkey.delim' = ':',
+'escape.delim' = '\\'
+) 
+
+-- give the bucket location 
+LOCATION 's3://athena-datalake-us-east-1/dymytryo/google_api_sheets_gdrf/'
+
+TBLPROPERTIES ('classification' = 'csv',
+'has_encrypted_data'='false',
+"skip.header.line.count"="1", -- ignore header 
+);
    ```
 3. Install NPM packages
    ```sh
