@@ -137,7 +137,9 @@ _Below is an example of how you can instruct your audience on installing and set
 
 1. Get a free API Key at [https://example.com](https://example.com)
 2. Clone the repo
-   ```sql
+3. 
+
+```sql
    CREATE EXTERNAL TABLE IF NOT EXISTS 
    database.test (yr INT,
     quarter INT,
@@ -195,7 +197,7 @@ TBLPROPERTIES ('classification' = 'csv',
 'has_encrypted_data'='false',
 "skip.header.line.count"="1", -- ignore header 
 );
-sql```
+```sql
   
   
 3. Install NPM packages
