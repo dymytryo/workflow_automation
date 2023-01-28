@@ -177,8 +177,7 @@ _Below is an example of how you can instruct your audience on installing and set
     deptimeblk STRING,
     taxiout INT,
     wheelsoff STRING,
-    wheelson STRING,
-
+    wheelson STRING
 )
 -- specify the type of SerDe (Serializer/Deserializer) to define the table schema with 
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
