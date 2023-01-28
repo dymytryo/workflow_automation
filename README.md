@@ -180,10 +180,8 @@ _Below is an example of how you can instruct your audience on installing and set
     wheelson STRING,
 
 )
-
 -- specify the type of SerDe (Serializer/Deserializer) to define the table schema with 
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
-
 -- specify the delimiters
 WITH SERDEPROPERTIES (
 'serialization.format' = ',',
@@ -192,15 +190,13 @@ WITH SERDEPROPERTIES (
 'mapkey.delim' = ':',
 'escape.delim' = '\\'
 ) 
-
 -- give the bucket location 
 LOCATION 's3://athena-datalake-us-east-1/dymytryo/google_api_sheets_gdrf/'
-
 TBLPROPERTIES ('classification' = 'csv',
 'has_encrypted_data'='false',
 "skip.header.line.count"="1", -- ignore header 
 );
-  ```
+sql```
   
   
 3. Install NPM packages
