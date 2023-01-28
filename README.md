@@ -200,7 +200,9 @@ TBLPROPERTIES ('classification' = 'csv',
 'has_encrypted_data'='false',
 "skip.header.line.count"="1", -- ignore header 
 );
-   ```
+  ```
+  
+  
 3. Install NPM packages
    ```sh
    npm install
