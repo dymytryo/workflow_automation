@@ -124,6 +124,11 @@ To set-up the environment for us to successfully execute this project, we will n
   # preserve google api secret
   import pickle 
   
+  # error logging 
+  import logging
+  import sys
+  import traceback as tb
+
   # graphing 
   import matplotlib as mpl
   import matplotlib.pyplot as plt
@@ -356,6 +361,7 @@ FROM
 ```
 
 ### Writing into the Table in Athena 
+Finally, we can write from the dataframe into the table. I used the logging for the errors should the connection fail and wrap the whole process into function `write_athena(table_name, df), showing simplified snipoet here:
 
 ```python
 # constant for the table 
