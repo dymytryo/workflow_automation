@@ -91,17 +91,17 @@
 ![alt text](https://github.com/dymytryo/google-sheets-api/blob/e83b42ea77531e90e146c745c98ac4354f966f1d/images/automation_workflow.png?raw=true)
 
 Steps:
-1. Manual input by the operations team. 
-2. Create a notebook in Sagemaker to ingest the data from the sheet.
-3. Setup the connection to Athena using PyAthena connector and cursor to execute the requests.
-4. Gather the data requested, wrangle, write into the sheet. 
-5. Upload the scheleton version of the sheet as .csv into bucket in S3 *(this is done only once)*.
-6. Create a scratch table from the .csv (this is done only once).
-7. Convert the table in the datalake into the Parqet format to ensure its persistance *(this is done only once)*.
-8. Write into the table the necessary data. 
-9. Pull the data from newly created table and data lake to visualize in Quicksight. 
-10. Set up the report to be automatically mailed to the management with KPIs.
-11. Set up cron job with CloudWatch to automatically triger the execution of the notebook in SageMaker to repeat the flow daily.  
+- [x] Manual input by the operations team. 
+- [x] Create a notebook in Sagemaker to ingest the data from the sheet.
+- [x] Setup the connection to Athena using PyAthena connector and cursor to execute the requests.
+- [x] Gather the data requested, wrangle, write into the sheet. 
+- [x] Upload the scheleton version of the sheet as .csv into bucket in S3 *(this is done only once)*.
+- [x] Create a scratch table from the .csv (this is done only once).
+- [x] Convert the table in the datalake into the Parqet format to ensure its persistance *(this is done only once)*.
+- [x] Write into the table the necessary data. 
+- [x] Pull the data from newly created table and data lake to visualize in Quicksight. 
+- [x] Set up the report to be automatically mailed to the management with KPIs.
+- [x] Set up cron job with CloudWatch to automatically triger the execution of the notebook in SageMaker to repeat the flow daily.  
 
 <!-- GETTING STARTED -->
 
@@ -236,6 +236,67 @@ header = df.iloc[0]
 df = df[1:]
 df.columns = header
 df 
+```
+Next, we identify the information that is need to fill in. The steps here is to create a tuple with values, insert it into query and then work with the dataframe further:
+```python
+merchant_ids = tuple(df.loc[df['transactions last month'].isnull()]['merchant id']) 
+
+merchant_transactions_query="""
+ SELECT 
+       ...
+  WHERE 
+       True 
+       AND merchant_id IN {}
+       ....
+              
+                            """.format(merchant_ids)
+
+# get the dataframe with data of interest 
+merchant_transactions_result = cursor.execute(merchant_transactions_query).as_pandas()
+
+# close the cursor 
+cursor.close()
+```
+Ultimately, we would arrive at the point of combining all the outputs:
+
+```python
+# create the list of all the dataframe that we worked with and now we would like to combine 
+data_frames = [df, merchant_transactions_result, payor_details_result, customer_success_kpis_result, contacts_result, merchant_details_result]
+
+# iterate to merge into one comprehensive dataframe 
+agg = reduce(lambda  left, right: pd.merge(left,
+                                     right,
+                                     on=['record_id'],
+                                     how='inner'),
+                                     data_frames)
+````
+Now, since we have done all the wrangling, we would want to write back into the Sheet that Operations are working with. There is a custom function `sheet_write(range,values0`, but showing decomposed here for visibility:
+
+```python
+try:
+    service = build('sheets', 'v4', credentials=creds)
+    # insert the df to write 
+    list = enrolled_bom.values.tolist()
+    resource = {
+      "majorDimension": "ROWS",
+      "values": list
+    }
+
+    # clear cells
+    range = sheet_name +'!K168:Q1368';
+    service.spreadsheets().values().clear(spreadsheetId=sheet_id, range=range).execute()      
+    
+    # fill cells
+    range = sheet_name +'!K168:Q1368';
+    service.spreadsheets().values().append(
+        spreadsheetId=sheet_id,
+        range=range,
+        body=resource,
+        valueInputOption="USER_ENTERED"
+    ).execute()
+    
+except HttpError as err:
+    print(err)
 ```
 
 
