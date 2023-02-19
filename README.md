@@ -83,45 +83,31 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
+**Problem at hand**: the Operations team is working with merchants and payors daily resolving their issues, but most of this brand new effort is kept in Google Sheets. Indeed, it is difficult to maintain the work and have all the necessary information at hand. 
+**Solution**: create an API call for the sheets and connect with the datalake to:
+* remove the need for separate queries and analysis - read from the sheet, then fill in automatically all the necessary columns from the datalake 
+* ingest the results, wrangle in Python, write into a table into a datalake, vizualize and send out to the stakeholders.
+
 ![alt text](https://github.com/dymytryo/google-sheets-api/blob/e83b42ea77531e90e146c745c98ac4354f966f1d/images/automation_workflow.png?raw=true)
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
-
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
-
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-### Built With
-
-This section should list any major frameworks/libraries used to bootstrap your project. Leave any add-ons/plugins for the acknowledgements section. Here are a few examples.
-
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+Steps:
+1. Manual input by the operations team. 
+2. Create a notebook in Sagemaker to ingest the data from the sheet.
+3. Setup the connection to Athena using PyAthena connector and cursor to execute the requests.
+4. Gather the data requested, wrangle, write into the sheet. 
+5. Upload the scheleton version of the sheet as .csv into bucket in S3 *(this is done only once)*.
+6. Create a scratch table from the .csv (this is done only once).
+7. Convert the table in the datalake into the Parqet format to ensure its persistance *(this is done only once)*.
+8. Write into the table the necessary data. 
+9. Pull the data from newly created table and data lake to visualize in Quicksight. 
+10. Set up the report to be automatically mailed to the management with KPIs.
+11. Set up cron job with CloudWatch to automatically triger the execution of the notebook in SageMaker to repeat the flow daily.  
 
 <!-- GETTING STARTED -->
+
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+We will cover some major snippets of the code. 
 
 ### Library Import
 To set-up the environment for us to successfully execute this project, we will need the following:
@@ -169,7 +155,89 @@ To set-up the environment for us to successfully execute this project, we will n
                  cursor_class=PandasCursor).cursor()
   ```
 
-### Installation
+### Reading Google Sheet
+
+This portion is actually wrapped in a function `read_sheet(url, range)`, but is broken down here for readibility:
+
+```python
+# OAuth 2.0
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+
+# sheet of interest 
+url = 'https://docs.google.com/spreadsheets/d/1cVkdf-aEQpvp8BfBd_BDKNDVD7rkOfhslI5JdQ/edit#gid=4569754212'
+
+# extract id 
+sheet_id = url.split('/')[5]
+print(sheet_id)
+```
+
+Little reference cheat-sheet: 
+* `Sheet1!A1:B2` refers to the first two cells in the top two rows of Sheet1.
+* `Sheet1!A:A` refers to all the cells in the first column of Sheet1.
+* `Sheet1!1:2` refers to all the cells in the first two rows of Sheet1.
+* `Sheet1!A5:A` refers to all the cells of the first column of Sheet 1, from row 5 onward.
+* `A1:B2` refers to the first two cells in the top two rows of the first visible sheet.
+* `Sheet1` refers to all the cells in Sheet1.
+* `'My Custom Sheet'!A:A` refers to all the cells in the first column of a sheet named "My Custom Sheet." Single quotes are required for sheet names with spaces, special characters, or an alphanumeric combination.
+* `'My Custom Sheet'` refers to all the cells in 'My Custom Sheet'.
+
+```python
+# set the range
+sheet_range = 'Operations Support Campaign' # give me the whole sheet 
+sheet_name = 'Operations Support Campaign' # using this later to modify only certain columns
+
+# credential
+creds = None
+
+# assing secret name 
+secret = 'dmytro_secret.json'
+
+# get the secret authenticated 
+if os.path.exists('token.rw'):
+    with open('token.rw', 'rb') as token:
+        creds = pickle.load(token)
+        
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(secret, SCOPES)
+        creds = flow.run_local_server(port=0)
+    # save the credentials for the next run
+    with open('token.rw', 'wb') as token:
+        pickle.dump(creds, token)
+        
+# read the values 
+try:
+    service = build('sheets', 'v4', credentials=creds)
+
+    # api call
+    sheet = service.spreadsheets()
+    result = sheet.values().get(spreadsheetId=sheet_id,
+                                range=sheet_range).execute()
+    values = result.get('values', [])
+
+    if not values:
+        print('No data found.')
+
+except HttpError as err:
+    print(err)
+```
+
+Next, I would want to make sense of value outputs and work with it in the dataframe format: 
+
+```python
+# build the data frame 
+df = pd.DataFrame(values)
+df.head()
+
+# assign header
+header = df.iloc[0]
+df = df[1:]
+df.columns = header
+df 
+```
+
 
 _Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
 
