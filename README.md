@@ -155,7 +155,7 @@ To set-up the environment for us to successfully execute this project, we will n
                  cursor_class=PandasCursor).cursor()
   ```
 
-### Reading Google Sheet
+### Reading from Google Sheet
 
 This portion is actually wrapped in a function `read_sheet(url, range)`, but is broken down here for readibility:
 
@@ -237,6 +237,8 @@ df = df[1:]
 df.columns = header
 df 
 ```
+
+### Writing into Google Sheet
 Next, we identify the information that is need to fill in. The steps here is to create a tuple with values, insert it into query and then work with the dataframe further:
 ```python
 merchant_ids = tuple(df.loc[df['transactions last month'].isnull()]['merchant id']) 
@@ -299,96 +301,80 @@ except HttpError as err:
     print(err)
 ```
 
+### Creating the Table in Athena 
+First, I will export my sceleton for the table from the notebook using `pd.to_csv('output.csv', index=False)`. Next, I will upload `.csv` file into the bucket. Now, I will go into Athena and run the following snippet.
+I used `.dtypes`,'df.columns', and `for` loop to streamline the process of generating the following snippet:
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-3. 
-
+Presto SQL(Athena): 
 ```sql
    CREATE EXTERNAL TABLE IF NOT EXISTS 
-   database.pre_payment_info (yr INT,
-    quarter INT,
-    month INT,
-    dayofmonth INT,
-    dayofweek INT,
-    flightdate STRING,
-    uniquecarrier STRING,
-    airlineid INT,
-    carrier STRING,
-    tailnum STRING,
-    flightnum STRING,
-    originairportid INT,
-    originairportseqid INT,
-    origincitymarketid INT,
-    origin STRING,
-    origincityname STRING,
-    originstate STRING,
-    originstatefips STRING,
-    originstatename STRING,
-    originwac INT,
-    destairportid INT,
-    destairportseqid INT,
-    destcitymarketid INT,
-    dest STRING,
-    destcityname STRING,
-    deststate STRING,
-    deststatefips STRING,
-    deststatename STRING,
-    destwac INT,
-    crsdeptime STRING,
-    deptime STRING,
-    depdelay INT,
-    depdelayminutes INT,
-    depdel15 INT,
-    departuredelaygroups INT,
-    deptimeblk STRING,
-    taxiout INT,
-    wheelsoff STRING,
-    wheelson STRING
-)
+   AWSDataCatalog.ops_merchant_contact_demo(
+                                              lastContactDate DATE,
+                                              merchantId STRING,
+                                              repId STRING,
+                                              payorId STRING,
+                                              contactType INT,
+                                              callOutcome INT,
+                                              emailContact INT,
+                                              cityName STRING,
+                                              state STRING,
+                                              transactionVolumeLifetime REAL,
+                                              ...
+                                             )
 -- specify the type of SerDe (Serializer/Deserializer) to define the table schema with 
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
 -- specify the delimiters
 WITH SERDEPROPERTIES (
-'serialization.format' = ',',
-'field.delim' = ',',
-'collection.delim' = '|',
-'mapkey.delim' = ':',
-'escape.delim' = '\\'
-) 
+                      'serialization.format' = ',',
+                      'field.delim' = ',',
+                      'collection.delim' = '|',
+                      'mapkey.delim' = ':',
+                      'escape.delim' = '\\'
+                      ) 
 -- give the bucket location 
-LOCATION 's3://athena-datalake-us-east-1/dymytryo/google_api_sheets_gdrf/'
-TBLPROPERTIES ('classification' = 'csv',
-'has_encrypted_data'='false',
-"skip.header.line.count"="1", -- ignore header 
-);
+LOCATION 's3://athena-datalake/dmytro/google_api_sheets_gdrf/'
+TBLPROPERTIES (
+                'classification' = 'csv',
+                'has_encrypted_data'='false',
+                "skip.header.line.count"="1", -- ignore header 
+               );
 ```
   
-3. 
-Issue: created table is dependent on the csv file and the idea is having this table slowly ingesting more information
-Solution: convert to parquet to lose the dependency on the S3 bucket
+Since the created table is dependent on the `.csv` file  uploaded and the idea is having this table slowly ingesting more information, we would want to convert to parquet to lose the dependency on the S3 bucket
 
-Athena SQL:
+Presto SQL(Athena): 
 ```sql
-   CREATE TABLE IF NOT EXISTS database.payment_info 
+   CREATE TABLE IF NOT EXISTS AWSDataCatalog.ops_merchant_contact_info 
 WITH (
       format = 'Parquet',
-      parquet_compression = 'SNAPPY')
-AS SELECT *
-FROM database.pre_payment_info ;
+      parquet_compression = 'SNAPPY'
+      )
+AS SELECT 
+    *
+FROM 
+    AWSDataCatalog.ops_merchant_contact_demo ;
 ```
 
+### Writing into the Table in Athena 
 
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
+```python
+# constant for the table 
+ATHENA_TABLE = "AWSDataCatalog.ops_merchant_contact_info"
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+# execute
+cursor.execute(
+    f"""
+INSERT INTO {ATHENA_TABLE}
+VALUES 
+      ('2022-08-09', 'mid045slpoiklamljg', ...),
+      ...
+      (...)
+      """
+)
+# close the connection
+cursor.close()
+```
+Now, all is done we can set up the dashboard in Quicksight and execute the automatic email sendout. 
 
 <!-- USAGE EXAMPLES -->
 ## Usage
