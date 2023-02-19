@@ -123,12 +123,50 @@ This section should list any major frameworks/libraries used to bootstrap your p
 This is an example of how you may give instructions on setting up your project locally.
 To get a local copy up and running follow these simple example steps.
 
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
+### Library Import
+To set-up the environment for us to successfully execute this project, we will need the following:
   ```python 
-  npm install npm@latest -g
+  # arrays and dataframes
+  import pandas as pd
+  import numpy as np
+  
+  # general functionality
+  import datetime as dt
+  import os
+  import decimal 
+  
+  # preserve google api secret
+  import pickle 
+  
+  # graphing 
+  import matplotlib as mpl
+  import matplotlib.pyplot as plt
+  import seaborn as sns
+
+  # expand the functionality of any function that takes only 2 arguments
+  from functools import reduce
+  
+  # settings
+  %matplotlib inline
+  mpl.style.use('ggplot')
+  pd.set_option('display.max_columns', None)
+  pd.options.display.float_format = '{:.2f}'.format # remove scientific notation 
+  
+  # settings
+  %matplotlib inline
+  mpl.style.use('ggplot')
+  pd.set_option('display.max_columns', None)
+  pd.options.display.float_format = '{:.2f}'.format # remove scientific notation 
+  
+  # establish connection
+  from pyathena import connect 
+  from pyathena.pandas.cursor import PandasCursor
+  
+  # fetch the data from the query result
+  cursor = connect(s3_staging_dir='s3://aws-athena/',
+                 region_name='us-east-1',
+                 work_group='Analyst',
+                 cursor_class=PandasCursor).cursor()
   ```
 
 ### Installation
